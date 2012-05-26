@@ -1,0 +1,15 @@
+62d85
+< #define SCULL_DATA_SIZE 16
+65,68c88,94
+< 	char data[SCULL_DATA_SIZE]; /* Pointer to first quantum set */
+< 	unsigned long size; /* amount of data stored here */
+< 	struct semaphore sem; /* mutual exclusion semaphore */
+< 	struct cdev cdev; 	/* Char device structure*/
+---
+> 	struct scull_qset *data;  /* Pointer to first quantum set */
+> 	int quantum;              /* the current quantum size */
+> 	int qset;                 /* the current array size */
+> 	unsigned long size;       /* amount of data stored here */
+> 	unsigned int access_key;  /* used by sculluid and scullpriv */
+> 	struct semaphore sem;     /* mutual exclusion semaphore     */
+> 	struct cdev cdev;	  /* Char device structure		*/

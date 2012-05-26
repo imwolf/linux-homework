@@ -1,0 +1,36 @@
+1.修改实现，增加资源数  DONE
+	a)修改结构体
+	b)sys_myevent_open(int eventNum,int value)
+	c)sys_myevent_wait(int eventNum)
+	d)sys_myevent_signal(int eventNum)
+
+2.将实现添加到kernel/sys.c中去（利用它的头文件）
+或者自定义一个文件，加上sched.h头文件和wait.h头文件并且修改Makefile  DONE
+http://forum.eepw.com.cn/thread/128730/1
+http://lwn.net/Articles/21835/
+obj-y 编译进内核 -->build.o
+//还是选择第一种吧，后一种以后再研究
+
+3.增加4个系统调用  DONE
+sys_myevent_open(int eventNum,int value)  
+sys_myevent_wait(int eventNum)
+sys_myevent_signal(int eventNum)
+sys_myevent_close(int eventNum)
+
+	a)x86的unistd_32.h	DONE
+#define __NR_myevent_open	340
+#define __NR_myevent_wait	341
+#define __NR_myevent_signal	342
+#define __NR_myevent_close	343
+
+#define NR_syscalls 344
+
+
+	b)x86的系统调用表(x86/kernel/syscall_table_32.S  DONE
+.long sys_myevent_open
+.long sys_myevent_wait
+.long sys_myevent_signal
+.long sys_myevent_close
+
+
+

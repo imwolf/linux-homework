@@ -1,0 +1,1 @@
+cmd_/home/wolf/experiment/linux_kernel/5/syscall.ko := ld -r -m elf_i386 -T /usr/src/linux-headers-3.2.0-24-generic-pae/scripts/module-common.lds --build-id  -o /home/wolf/experiment/linux_kernel/5/syscall.ko /home/wolf/experiment/linux_kernel/5/syscall.o /home/wolf/experiment/linux_kernel/5/syscall.mod.o

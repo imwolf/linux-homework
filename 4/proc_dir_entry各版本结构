@@ -1,0 +1,92 @@
+
+//3.2.0
+struct proc_dir_entry {
+  52        unsigned int low_ino;
+  53        mode_t mode;
+  54        nlink_t nlink;
+  55        uid_t uid;
+  56        gid_t gid;
+  57        loff_t size;
+  58        const struct inode_operations *proc_iops;
+  59        /*
+  60         * NULL ->proc_fops means "PDE is going away RSN" or
+  61         * "PDE is just created". In either case, e.g. ->read_proc won't be
+  62         * called because it's too late or too early, respectively.
+  63         *
+  64         * If you're allocating ->proc_fops dynamically, save a pointer
+  65         * somewhere.
+  66         */
+  67        const struct file_operations *proc_fops;
+  68        struct proc_dir_entry *next, *parent, *subdir;
+  69        void *data;
+  70        read_proc_t *read_proc;
+  71        write_proc_t *write_proc;
+  72        atomic_t count;         /* use count */
+  73        int pde_users;  /* number of callers into module in progress */
+  74        struct completion *pde_unload_completion;
+  75        struct list_head pde_openers;   /* who did ->open, but not ->release */
+  76        spinlock_t pde_unload_lock; /* proc_fops checks and pde_users bumps */
+  77        u8 namelen;
+  78        char name[];
+
+//v2.6.25
+struct proc_dir_entry {
+  55        unsigned int low_ino;
+  56        unsigned short namelen;
+  57        const char *name;
+  58        mode_t mode;
+  59        nlink_t nlink;
+  60        uid_t uid;
+  61        gid_t gid;
+  62        loff_t size;
+  63        const struct inode_operations *proc_iops;
+  64        /*
+  65         * NULL ->proc_fops means "PDE is going away RSN" or
+  66         * "PDE is just created". In either case, e.g. ->read_proc won't be
+  67         * called because it's too late or too early, respectively.
+  68         *
+  69         * If you're allocating ->proc_fops dynamically, save a pointer
+  70         * somewhere.
+  71         */
+  72        const struct file_operations *proc_fops;
+  73        get_info_t *get_info;
+  74        struct module *owner;
+  75        struct proc_dir_entry *next, *parent, *subdir;
+  76        void *data;
+  77        read_proc_t *read_proc;
+  78        write_proc_t *write_proc;
+  79        atomic_t count;         /* use count */
+  80        int pde_users;  /* number of callers into module in progress */
+  81        spinlock_t pde_unload_lock; /* proc_fops checks and pde_users bumps */
+  82        struct completion *pde_unload_completion;
+
+//v2.6.30 没有owner了
+  51struct proc_dir_entry {
+  52        unsigned int low_ino;
+  53        unsigned short namelen;
+  54        const char *name;
+  55        mode_t mode;
+  56        nlink_t nlink;
+  57        uid_t uid;
+  58        gid_t gid;
+  59        loff_t size;
+  60        const struct inode_operations *proc_iops;
+  61        /*
+  62         * NULL ->proc_fops means "PDE is going away RSN" or
+  63         * "PDE is just created". In either case, e.g. ->read_proc won't be
+  64         * called because it's too late or too early, respectively.
+  65         *
+  66         * If you're allocating ->proc_fops dynamically, save a pointer
+  67         * somewhere.
+  68         */
+  69        const struct file_operations *proc_fops;
+  70        struct proc_dir_entry *next, *parent, *subdir;
+  71        void *data;
+  72        read_proc_t *read_proc;
+  73        write_proc_t *write_proc;
+  74        atomic_t count;         /* use count */
+  75        int pde_users;  /* number of callers into module in progress */
+  76        spinlock_t pde_unload_lock; /* proc_fops checks and pde_users bumps */
+  77        struct completion *pde_unload_completion;
+  78        struct list_head pde_openers;   /* who did ->open, but not ->release */
+  79};

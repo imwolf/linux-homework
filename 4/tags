@@ -1,0 +1,20 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+MODULE_NAME	proc_module.c	8;"	d	file:
+MYDATA_LEN	proc_module.c	9;"	d	file:
+cleanup_module	proc_module.c	/^void cleanup_module(void)$/;"	f	signature:(void)
+data_file	proc_module.c	/^static struct proc_dir_entry *data_file;$/;"	v	typeref:struct:proc_dir_entry	file:
+example_dir	proc_module.c	/^static struct proc_dir_entry *example_dir;$/;"	v	typeref:struct:proc_dir_entry	file:
+init_module	proc_module.c	/^int init_module(void)$/;"	f	signature:(void)
+my_proc_data	proc_module.c	/^struct my_proc_data{$/;"	s	file:
+my_proc_data::value	proc_module.c	/^	char value[MYDATA_LEN];$/;"	m	struct:my_proc_data	file:	access:public
+mydata	proc_module.c	/^struct my_proc_data mydata;$/;"	v	typeref:struct:my_proc_data
+obj-m	Makefile	/^obj-m := proc_module.o$/;"	m
+param	proc_module.c	/^static int param;$/;"	v	file:
+proc_read	proc_module.c	/^static int proc_read(char *page,char **start,off_t off,int count,int *eof,void *data)$/;"	f	file:	signature:(char *page,char **start,off_t off,int count,int *eof,void *data)
+proc_write	proc_module.c	/^static int proc_write(struct file *file,const char* buffer,unsigned long count,void *data)$/;"	f	file:	signature:(struct file *file,const char* buffer,unsigned long count,void *data)
+value	proc_module.c	/^	char value[MYDATA_LEN];$/;"	m	struct:my_proc_data	file:	access:public

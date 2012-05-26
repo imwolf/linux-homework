@@ -1,0 +1,4 @@
+CC=gcc
+
+all:
+	$(CC) -Wall -O2 -DMODULE -D__KERNEL__ -DLINUX -c syscall.c

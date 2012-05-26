@@ -1,0 +1,1 @@
+cmd_/home/wolf/experiment/linux_kernel/7/pipe/scull_pipe.ko := ld -r -m elf_i386 -T /usr/src/linux-headers-3.2.0-23-generic-pae/scripts/module-common.lds --build-id  -o /home/wolf/experiment/linux_kernel/7/pipe/scull_pipe.ko /home/wolf/experiment/linux_kernel/7/pipe/scull_pipe.o /home/wolf/experiment/linux_kernel/7/pipe/scull_pipe.mod.o

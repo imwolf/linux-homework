@@ -1,0 +1,639 @@
+1c1,17
+< //#include <linux/config.h>  2.6.35 and 3.0.24 does not have this
+---
+> /*
+>  * main.c -- the bare scull char module
+>  *
+>  * Copyright (C) 2001 Alessandro Rubini and Jonathan Corbet
+>  * Copyright (C) 2001 O'Reilly & Associates
+>  *
+>  * The source code in this file can be freely used, adapted,
+>  * and redistributed in source or binary form, so long as an
+>  * acknowledgment appears in derived source files.  The citation
+>  * should list that the code comes from the book "Linux Device
+>  * Drivers" by Alessandro Rubini and Jonathan Corbet, published
+>  * by O'Reilly & Associates.   No warranty is attached;
+>  * we cannot take responsibility for errors or fitness for use.
+>  *
+>  */
+> 
+> #include <linux/config.h>
+6,10c22,26
+< #include <linux/kernel.h> /* printk() */
+< #include <linux/slab.h> /* kmalloc() */
+< #include <linux/fs.h>  /* everything... */
+< #include <linux/errno.h>  /* error codes */
+< #include <linux/types.h> /* size_t */
+---
+> #include <linux/kernel.h>	/* printk() */
+> #include <linux/slab.h>		/* kmalloc() */
+> #include <linux/fs.h>		/* everything... */
+> #include <linux/errno.h>	/* error codes */
+> #include <linux/types.h>	/* size_t */
+11a28
+> #include <linux/fcntl.h>	/* O_ACCMODE */
+14,15c31,35
+< #include <asm/uaccess.h> /* copy_*_user */
+< #include "scull.h" /* local definitions */
+---
+> 
+> #include <asm/system.h>		/* cli(), *_flags */
+> #include <asm/uaccess.h>	/* copy_*_user */
+> 
+> #include "scull.h"		/* local definitions */
+20,22c40,46
+< int scull_major = SCULL_MAJOR;
+< int scull_minor = 0;
+< int scull_nr_devs = SCULL_NR_DEVS; /* number of bare scull devices */
+---
+> 
+> int scull_major =   SCULL_MAJOR;
+> int scull_minor =   0;
+> int scull_nr_devs = SCULL_NR_DEVS;	/* number of bare scull devices */
+> int scull_quantum = SCULL_QUANTUM;
+> int scull_qset =    SCULL_QSET;
+> 
+25a50,52
+> module_param(scull_quantum, int, S_IRUGO);
+> module_param(scull_qset, int, S_IRUGO);
+> 
+28c55,57
+< struct scull_dev *scull_devices; /* allocated in scull_init_module */
+---
+> 
+> struct scull_dev *scull_devices;	/* allocated in scull_init_module */
+> 
+36c65,78
+< 	memset(dev->data, 0, SCULL_DATA_SIZE);
+---
+> 	struct scull_qset *next, *dptr;
+> 	int qset = dev->qset;   /* "dev" is not-null */
+> 	int i;
+> 
+> 	for (dptr = dev->data; dptr; dptr = next) { /* all the list items */
+> 		if (dptr->data) {
+> 			for (i = 0; i < qset; i++)
+> 				kfree(dptr->data[i]);
+> 			kfree(dptr->data);
+> 			dptr->data = NULL;
+> 		}
+> 		next = dptr->next;
+> 		kfree(dptr);
+> 	}
+37a80,82
+> 	dev->quantum = scull_quantum;
+> 	dev->qset = scull_qset;
+> 	dev->data = NULL;
+39a85,231
+> #ifdef SCULL_DEBUG /* use proc only if debugging */
+> /*
+>  * The proc filesystem: function to read and entry
+>  */
+> 
+> int scull_read_procmem(char *buf, char **start, off_t offset,
+>                    int count, int *eof, void *data)
+> {
+> 	int i, j, len = 0;
+> 	int limit = count - 80; /* Don't print more than this */
+> 
+> 	for (i = 0; i < scull_nr_devs && len <= limit; i++) {
+> 		struct scull_dev *d = &scull_devices[i];
+> 		struct scull_qset *qs = d->data;
+> 		if (down_interruptible(&d->sem))
+> 			return -ERESTARTSYS;
+> 		len += sprintf(buf+len,"\nDevice %i: qset %i, q %i, sz %li\n",
+> 				i, d->qset, d->quantum, d->size);
+> 		for (; qs && len <= limit; qs = qs->next) { /* scan the list */
+> 			len += sprintf(buf + len, "  item at %p, qset at %p\n",
+> 					qs, qs->data);
+> 			if (qs->data && !qs->next) /* dump only the last item */
+> 				for (j = 0; j < d->qset; j++) {
+> 					if (qs->data[j])
+> 						len += sprintf(buf + len,
+> 								"    % 4i: %8p\n",
+> 								j, qs->data[j]);
+> 				}
+> 		}
+> 		up(&scull_devices[i].sem);
+> 	}
+> 	*eof = 1;
+> 	return len;
+> }
+> 
+> 
+> /*
+>  * For now, the seq_file implementation will exist in parallel.  The
+>  * older read_procmem function should maybe go away, though.
+>  */
+> 
+> /*
+>  * Here are our sequence iteration methods.  Our "position" is
+>  * simply the device number.
+>  */
+> static void *scull_seq_start(struct seq_file *s, loff_t *pos)
+> {
+> 	if (*pos >= scull_nr_devs)
+> 		return NULL;   /* No more to read */
+> 	return scull_devices + *pos;
+> }
+> 
+> static void *scull_seq_next(struct seq_file *s, void *v, loff_t *pos)
+> {
+> 	(*pos)++;
+> 	if (*pos >= scull_nr_devs)
+> 		return NULL;
+> 	return scull_devices + *pos;
+> }
+> 
+> static void scull_seq_stop(struct seq_file *s, void *v)
+> {
+> 	/* Actually, there's nothing to do here */
+> }
+> 
+> static int scull_seq_show(struct seq_file *s, void *v)
+> {
+> 	struct scull_dev *dev = (struct scull_dev *) v;
+> 	struct scull_qset *d;
+> 	int i;
+> 
+> 	if (down_interruptible(&dev->sem))
+> 		return -ERESTARTSYS;
+> 	seq_printf(s, "\nDevice %i: qset %i, q %i, sz %li\n",
+> 			(int) (dev - scull_devices), dev->qset,
+> 			dev->quantum, dev->size);
+> 	for (d = dev->data; d; d = d->next) { /* scan the list */
+> 		seq_printf(s, "  item at %p, qset at %p\n", d, d->data);
+> 		if (d->data && !d->next) /* dump only the last item */
+> 			for (i = 0; i < dev->qset; i++) {
+> 				if (d->data[i])
+> 					seq_printf(s, "    % 4i: %8p\n",
+> 							i, d->data[i]);
+> 			}
+> 	}
+> 	up(&dev->sem);
+> 	return 0;
+> }
+> 	
+> /*
+>  * Tie the sequence operators up.
+>  */
+> static struct seq_operations scull_seq_ops = {
+> 	.start = scull_seq_start,
+> 	.next  = scull_seq_next,
+> 	.stop  = scull_seq_stop,
+> 	.show  = scull_seq_show
+> };
+> 
+> /*
+>  * Now to implement the /proc file we need only make an open
+>  * method which sets up the sequence operators.
+>  */
+> static int scull_proc_open(struct inode *inode, struct file *file)
+> {
+> 	return seq_open(file, &scull_seq_ops);
+> }
+> 
+> /*
+>  * Create a set of file operations for our proc file.
+>  */
+> static struct file_operations scull_proc_ops = {
+> 	.owner   = THIS_MODULE,
+> 	.open    = scull_proc_open,
+> 	.read    = seq_read,
+> 	.llseek  = seq_lseek,
+> 	.release = seq_release
+> };
+> 	
+> 
+> /*
+>  * Actually create (and remove) the /proc file(s).
+>  */
+> 
+> static void scull_create_proc(void)
+> {
+> 	struct proc_dir_entry *entry;
+> 	create_proc_read_entry("scullmem", 0 /* default mode */,
+> 			NULL /* parent dir */, scull_read_procmem,
+> 			NULL /* client data */);
+> 	entry = create_proc_entry("scullseq", 0, NULL);
+> 	if (entry)
+> 		entry->proc_fops = &scull_proc_ops;
+> }
+> 
+> static void scull_remove_proc(void)
+> {
+> 	/* no problem if it was not registered */
+> 	remove_proc_entry("scullmem", NULL /* parent dir */);
+> 	remove_proc_entry("scullseq", NULL);
+> }
+> 
+> 
+> #endif /* SCULL_DEBUG */
+> 
+> 
+> 
+44a237
+> 
+47a241
+> 
+58c252
+< 	return 0; /* success */
+---
+> 	return 0;          /* success */
+61d254
+< 
+65a259,286
+> /*
+>  * Follow the list
+>  */
+> struct scull_qset *scull_follow(struct scull_dev *dev, int n)
+> {
+> 	struct scull_qset *qs = dev->data;
+> 
+>         /* Allocate first qset explicitly if need be */
+> 	if (! qs) {
+> 		qs = dev->data = kmalloc(sizeof(struct scull_qset), GFP_KERNEL);
+> 		if (qs == NULL)
+> 			return NULL;  /* Never mind */
+> 		memset(qs, 0, sizeof(struct scull_qset));
+> 	}
+> 
+> 	/* Then follow the list */
+> 	while (n--) {
+> 		if (!qs->next) {
+> 			qs->next = kmalloc(sizeof(struct scull_qset), GFP_KERNEL);
+> 			if (qs->next == NULL)
+> 				return NULL;  /* Never mind */
+> 			memset(qs->next, 0, sizeof(struct scull_qset));
+> 		}
+> 		qs = qs->next;
+> 		continue;
+> 	}
+> 	return qs;
+> }
+69a291
+> 
+71c293
+< 		loff_t *f_pos)
+---
+>                 loff_t *f_pos)
+73c295,299
+< 	struct scull_dev *dev = filp->private_data;
+---
+> 	struct scull_dev *dev = filp->private_data; 
+> 	struct scull_qset *dptr;	/* the first listitem */
+> 	int quantum = dev->quantum, qset = dev->qset;
+> 	int itemsize = quantum * qset; /* how many bytes in the listitem */
+> 	int item, s_pos, q_pos, rest;
+74a301
+> 
+81c308,324
+< 	if (copy_to_user(buf, dev->data + *f_pos, count)) {
+---
+> 
+> 	/* find listitem, qset index, and offset in the quantum */
+> 	item = (long)*f_pos / itemsize;
+> 	rest = (long)*f_pos % itemsize;
+> 	s_pos = rest / quantum; q_pos = rest % quantum;
+> 
+> 	/* follow the list up to the right position (defined elsewhere) */
+> 	dptr = scull_follow(dev, item);
+> 
+> 	if (dptr == NULL || !dptr->data || ! dptr->data[s_pos])
+> 		goto out; /* don't fill holes */
+> 
+> 	/* read only up to the end of this quantum */
+> 	if (count > quantum - q_pos)
+> 		count = quantum - q_pos;
+> 
+> 	if (copy_to_user(buf, dptr->data[s_pos] + q_pos, count)) {
+87c330,331
+< out:
+---
+> 
+>   out:
+90a335
+> 
+92c337
+< 		loff_t *f_pos)
+---
+>                 loff_t *f_pos)
+94a340,343
+> 	struct scull_qset *dptr;
+> 	int quantum = dev->quantum, qset = dev->qset;
+> 	int itemsize = quantum * qset;
+> 	int item, s_pos, q_pos, rest;
+95a345
+> 
+98,99c348,356
+< 	if (*f_pos >= SCULL_DATA_SIZE) {
+< 		retval = -ENOSPC;
+---
+> 
+> 	/* find listitem, qset index and offset in the quantum */
+> 	item = (long)*f_pos / itemsize;
+> 	rest = (long)*f_pos % itemsize;
+> 	s_pos = rest / quantum; q_pos = rest % quantum;
+> 
+> 	/* follow the list up to the right position */
+> 	dptr = scull_follow(dev, item);
+> 	if (dptr == NULL)
+100a358,367
+> 	if (!dptr->data) {
+> 		dptr->data = kmalloc(qset * sizeof(char *), GFP_KERNEL);
+> 		if (!dptr->data)
+> 			goto out;
+> 		memset(dptr->data, 0, qset * sizeof(char *));
+> 	}
+> 	if (!dptr->data[s_pos]) {
+> 		dptr->data[s_pos] = kmalloc(quantum, GFP_KERNEL);
+> 		if (!dptr->data[s_pos])
+> 			goto out;
+102,104c369,373
+< 	if (*f_pos + count > SCULL_DATA_SIZE)
+< 		count = SCULL_DATA_SIZE - *f_pos;
+< 	if (copy_from_user(dev->data + *f_pos, buf, count)) {
+---
+> 	/* write only up to the end of this quantum */
+> 	if (count > quantum - q_pos)
+> 		count = quantum - q_pos;
+> 
+> 	if (copy_from_user(dptr->data[s_pos]+q_pos, buf, count)) {
+110,111c379,384
+< 	dev->size = *f_pos;
+< out:
+---
+> 
+>         /* update the size */
+> 	if (dev->size < *f_pos)
+> 		dev->size = *f_pos;
+> 
+>   out:
+114a388,522
+> 
+> /*
+>  * The ioctl() implementation
+>  */
+> 
+> int scull_ioctl(struct inode *inode, struct file *filp,
+>                  unsigned int cmd, unsigned long arg)
+> {
+> 
+> 	int err = 0, tmp;
+> 	int retval = 0;
+>     
+> 	/*
+> 	 * extract the type and number bitfields, and don't decode
+> 	 * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
+> 	 */
+> 	if (_IOC_TYPE(cmd) != SCULL_IOC_MAGIC) return -ENOTTY;
+> 	if (_IOC_NR(cmd) > SCULL_IOC_MAXNR) return -ENOTTY;
+> 
+> 	/*
+> 	 * the direction is a bitmask, and VERIFY_WRITE catches R/W
+> 	 * transfers. `Type' is user-oriented, while
+> 	 * access_ok is kernel-oriented, so the concept of "read" and
+> 	 * "write" is reversed
+> 	 */
+> 	if (_IOC_DIR(cmd) & _IOC_READ)
+> 		err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
+> 	else if (_IOC_DIR(cmd) & _IOC_WRITE)
+> 		err =  !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
+> 	if (err) return -EFAULT;
+> 
+> 	switch(cmd) {
+> 
+> 	  case SCULL_IOCRESET:
+> 		scull_quantum = SCULL_QUANTUM;
+> 		scull_qset = SCULL_QSET;
+> 		break;
+>         
+> 	  case SCULL_IOCSQUANTUM: /* Set: arg points to the value */
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		retval = __get_user(scull_quantum, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCTQUANTUM: /* Tell: arg is the value */
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		scull_quantum = arg;
+> 		break;
+> 
+> 	  case SCULL_IOCGQUANTUM: /* Get: arg is pointer to result */
+> 		retval = __put_user(scull_quantum, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCQQUANTUM: /* Query: return it (it's positive) */
+> 		return scull_quantum;
+> 
+> 	  case SCULL_IOCXQUANTUM: /* eXchange: use arg as pointer */
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		tmp = scull_quantum;
+> 		retval = __get_user(scull_quantum, (int __user *)arg);
+> 		if (retval == 0)
+> 			retval = __put_user(tmp, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCHQUANTUM: /* sHift: like Tell + Query */
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		tmp = scull_quantum;
+> 		scull_quantum = arg;
+> 		return tmp;
+>         
+> 	  case SCULL_IOCSQSET:
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		retval = __get_user(scull_qset, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCTQSET:
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		scull_qset = arg;
+> 		break;
+> 
+> 	  case SCULL_IOCGQSET:
+> 		retval = __put_user(scull_qset, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCQQSET:
+> 		return scull_qset;
+> 
+> 	  case SCULL_IOCXQSET:
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		tmp = scull_qset;
+> 		retval = __get_user(scull_qset, (int __user *)arg);
+> 		if (retval == 0)
+> 			retval = put_user(tmp, (int __user *)arg);
+> 		break;
+> 
+> 	  case SCULL_IOCHQSET:
+> 		if (! capable (CAP_SYS_ADMIN))
+> 			return -EPERM;
+> 		tmp = scull_qset;
+> 		scull_qset = arg;
+> 		return tmp;
+> 
+>         /*
+>          * The following two change the buffer size for scullpipe.
+>          * The scullpipe device uses this same ioctl method, just to
+>          * write less code. Actually, it's the same driver, isn't it?
+>          */
+> 
+> 	  case SCULL_P_IOCTSIZE:
+> 		scull_p_buffer = arg;
+> 		break;
+> 
+> 	  case SCULL_P_IOCQSIZE:
+> 		return scull_p_buffer;
+> 
+> 
+> 	  default:  /* redundant, as cmd was checked against MAXNR */
+> 		return -ENOTTY;
+> 	}
+> 	return retval;
+> 
+> }
+> 
+> 
+> 
+> /*
+>  * The "extended" operations -- only seek
+>  */
+> 
+118a527
+> 
+120,132c529,541
+< 		case 0: /* SEEK_SET */
+< 			newpos = off;
+< 			break;
+< 		case 1: /* SEEK_CUR */
+< 			newpos = filp->f_pos + off;
+< 			break;
+< 		case 2: /* SEEK_END */
+< 			newpos = dev->size + off;
+< 			break;
+< 		default: /* can't happen */
+< 			return -EINVAL;
+< 	}
+< 	if (newpos < 0)
+---
+> 	  case 0: /* SEEK_SET */
+> 		newpos = off;
+> 		break;
+> 
+> 	  case 1: /* SEEK_CUR */
+> 		newpos = filp->f_pos + off;
+> 		break;
+> 
+> 	  case 2: /* SEEK_END */
+> 		newpos = dev->size + off;
+> 		break;
+> 
+> 	  default: /* can't happen */
+133a543,544
+> 	}
+> 	if (newpos < 0) return -EINVAL;
+136a548,550
+> 
+> 
+> 
+138,143c552,558
+< 	.owner = THIS_MODULE,
+< 	.llseek = scull_llseek,
+< 	.read = scull_read,
+< 	.write = scull_write,
+< 	.open = scull_open,
+< 	.release = scull_release,
+---
+> 	.owner =    THIS_MODULE,
+> 	.llseek =   scull_llseek,
+> 	.read =     scull_read,
+> 	.write =    scull_write,
+> 	.ioctl =    scull_ioctl,
+> 	.open =     scull_open,
+> 	.release =  scull_release,
+158a574
+> 
+166a583,587
+> 
+> #ifdef SCULL_DEBUG /* use proc only if debugging */
+> 	scull_remove_proc();
+> #endif
+> 
+168a590,594
+> 
+> 	/* and call the cleanup functions for friend devices */
+> 	scull_p_cleanup();
+> 	scull_access_cleanup();
+> 
+169a596,597
+> 
+> 
+175a604
+>     
+183a613,614
+> 
+> 
+188,191c619,623
+< 	/*
+< 	 * Get a range of minor numbers to work with, asking for a dynamic
+< 	 * major unless directed otherwise at load time.
+< 	 */
+---
+> 
+> /*
+>  * Get a range of minor numbers to work with, asking for a dynamic
+>  * major unless directed otherwise at load time.
+>  */
+204c636,637
+< 	/*
+---
+> 
+>         /* 
+208,209c641
+< 	scull_devices = kmalloc(scull_nr_devs * sizeof(struct scull_dev),
+< 			GFP_KERNEL);
+---
+> 	scull_devices = kmalloc(scull_nr_devs * sizeof(struct scull_dev), GFP_KERNEL);
+212c644
+< 		goto fail; /* Make this more graceful */
+---
+> 		goto fail;  /* Make this more graceful */
+215c647,648
+< 	/* Initialize each device. */
+---
+> 
+>         /* Initialize each device. */
+217,218c650,652
+< 		//init_MUTEX(&scull_devices[i].sem);
+< 		sema_init(&scull_devices[i].sem,1);//since about 2.6.36? been removed
+---
+> 		scull_devices[i].quantum = scull_quantum;
+> 		scull_devices[i].qset = scull_qset;
+> 		init_MUTEX(&scull_devices[i].sem);
+220a655,664
+> 
+>         /* At this point call the init function for any friend device */
+> 	dev = MKDEV(scull_major, scull_minor + scull_nr_devs);
+> 	dev += scull_p_init(dev);
+> 	dev += scull_access_init(dev);
+> 
+> #ifdef SCULL_DEBUG /* only when debugging */
+> 	scull_create_proc();
+> #endif
+> 
+222c666,667
+< fail:
+---
+> 
+>   fail:
+225a671
+> 
+228,229d673
+< 
+< 

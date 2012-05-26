@@ -1,0 +1,60 @@
+%option noyywrap nodefault
+
+
+%{
+#include <stdio.h>
+#define DEBUG
+
+extern char *line_buf;
+extern int line_len;
+
+static int my_yyinput(char *yybuf,int max_size);
+
+static int do_list_cmd();  /*list-1个？或多个管道，;&  ||  &&分割*/
+static int do_pipe_cmd(int argc,char **argv);/*管道一个或多个命令，|分割*/
+static int do_simple_cmd(int argc,char **argv,int prefd[],int postfd[]);
+/*赋值跟着空格分割的单词记号，*/
+
+/*由于输入源既不是终端也不是标准文件，而是readline返回的字符串，所以重定义该宏*/
+#undef YY_INPUT
+#define YY_INPUT(yybuf,result,max_size) (result = my_yyinput(yybuf,max_size))
+
+char * tokens[200]; //读到的行分解之后存放的地方
+int tok_cnt = 0;
+
+
+
+%}
+
+%x QUOTE
+%x SINGQUOTE
+blank [ \t]
+
+%%
+
+";"	{printf("a ;\t");}
+">"	{printf("a >\t"); }
+"<"	{printf("a <\t"); }
+"|"	{printf("a pipe |\t"); }
+\n	{printf("new line\n");return 1;}
+.	{}
+
+%%
+
+static int my_yyinput(char * yybuf,int max_size)
+{
+	//输入大于能够flex缓冲区能接受的大小？直接提示错误
+	//16K还会溢出?而且错误的话应该返回什么值0表示EOF
+	if ( line_len < max_size ){ 
+		memcpy(yybuf,line_buf,line_len);
+		#ifdef DEBUG
+		printf("contents in yybuf:%s\n",yybuf);
+		printf("contents length :%d\n",strlen(yybuf));
+		#endif
+		return line_len;
+	}
+	else {
+		printf("your input is too long\n");
+		return -1;
+	}
+}

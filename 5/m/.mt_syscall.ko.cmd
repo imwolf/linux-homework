@@ -1,0 +1,1 @@
+cmd_/home/wolf/experiment/linux_kernel/5/m/mt_syscall.ko := ld -r -m elf_i386 -T /home/wolf/linux/linux-2.6.35.14/scripts/module-common.lds --build-id -o /home/wolf/experiment/linux_kernel/5/m/mt_syscall.ko /home/wolf/experiment/linux_kernel/5/m/mt_syscall.o /home/wolf/experiment/linux_kernel/5/m/mt_syscall.mod.o

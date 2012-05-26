@@ -1,0 +1,188 @@
+0a1,17
+> /*
+>  * scull.h -- definitions for the char module
+>  *
+>  * Copyright (C) 2001 Alessandro Rubini and Jonathan Corbet
+>  * Copyright (C) 2001 O'Reilly & Associates
+>  *
+>  * The source code in this file can be freely used, adapted,
+>  * and redistributed in source or binary form, so long as an
+>  * acknowledgment appears in derived source files.  The citation
+>  * should list that the code comes from the book "Linux Device
+>  * Drivers" by Alessandro Rubini and Jonathan Corbet, published
+>  * by O'Reilly & Associates.   No warranty is attached;
+>  * we cannot take responsibility for errors or fitness for use.
+>  *
+>  * $Id: scull.h,v 1.15 2004/11/04 17:51:18 rubini Exp $
+>  */
+> 
+2a20
+> 
+3a22
+> 
+7,8c26,27
+< #undef PDEBUG
+< /* undef it, just in case */
+---
+> 
+> #undef PDEBUG             /* undef it, just in case */
+10,16c29,35
+< # ifdef __KERNEL__
+< /* This one if debugging is on, and kernel space */
+< # define PDEBUG(fmt, args...) printk( KERN_DEBUG "scull: " fmt, ## args)
+< # else
+< /* This one for user space */
+< # define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+< # endif
+---
+> #  ifdef __KERNEL__
+>      /* This one if debugging is on, and kernel space */
+> #    define PDEBUG(fmt, args...) printk( KERN_DEBUG "scull: " fmt, ## args)
+> #  else
+>      /* This one for user space */
+> #    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+> #  endif
+18c37
+< # define PDEBUG(fmt, args...) /* not debugging: nothing */
+---
+> #  define PDEBUG(fmt, args...) /* not debugging: nothing */
+19a39
+> 
+21a42
+> 
+23c44,52
+< #define SCULL_MAJOR 0
+---
+> #define SCULL_MAJOR 0   /* dynamic major by default */
+> #endif
+> 
+> #ifndef SCULL_NR_DEVS
+> #define SCULL_NR_DEVS 4    /* scull0 through scull3 */
+> #endif
+> 
+> #ifndef SCULL_P_NR_DEVS
+> #define SCULL_P_NR_DEVS 4  /* scullpipe0 through scullpipe3 */
+25,31c54
+< /* dynamic major by default */
+< #ifndef SCULL_NR_DEVS /* scull0 through scull3 */
+< #define SCULL_NR_DEVS 4 
+< #endif 
+< #ifndef SCULL_P_NR_DEVS 
+< #define SCULL_P_NR_DEVS 4 
+< #endif 
+---
+> 
+43a67
+> 
+45c69
+< #define SCULL_QSET 1000
+---
+> #define SCULL_QSET    1000
+62d85
+< #define SCULL_DATA_SIZE 16
+65,68c88,94
+< 	char data[SCULL_DATA_SIZE]; /* Pointer to first quantum set */
+< 	unsigned long size; /* amount of data stored here */
+< 	struct semaphore sem; /* mutual exclusion semaphore */
+< 	struct cdev cdev; 	/* Char device structure*/
+---
+> 	struct scull_qset *data;  /* Pointer to first quantum set */
+> 	int quantum;              /* the current quantum size */
+> 	int qset;                 /* the current array size */
+> 	unsigned long size;       /* amount of data stored here */
+> 	unsigned int access_key;  /* used by sculluid and scullpriv */
+> 	struct semaphore sem;     /* mutual exclusion semaphore     */
+> 	struct cdev cdev;	  /* Char device structure		*/
+74,75c100,102
+< #define TYPE(minor) (((minor) >> 4) & 0xf) /* high nibble */
+< #define NUM(minor) ((minor) & 0xf) /* low nibble */
+---
+> #define TYPE(minor)	(((minor) >> 4) & 0xf)	/* high nibble */
+> #define NUM(minor)	((minor) & 0xf)		/* low  nibble */
+> 
+80c107
+< extern int scull_major; /* main.c */
+---
+> extern int scull_major;     /* main.c */
+85c112,113
+< extern int scull_p_buffer; /* pipe.c */
+---
+> extern int scull_p_buffer;	/* pipe.c */
+> 
+90,94c118,125
+< int 	scull_p_init(dev_t dev);
+< void 	scull_p_cleanup(void);
+< int 	scull_access_init(dev_t dev);
+< void 	scull_access_cleanup(void);
+< int 	scull_trim(struct scull_dev *dev);
+---
+> 
+> int     scull_p_init(dev_t dev);
+> void    scull_p_cleanup(void);
+> int     scull_access_init(dev_t dev);
+> void    scull_access_cleanup(void);
+> 
+> int     scull_trim(struct scull_dev *dev);
+> 
+96c127
+< 		loff_t *f_pos);
+---
+>                    loff_t *f_pos);
+98,101c129,133
+< 		loff_t *f_pos);
+< loff_t 	scull_llseek(struct file *filp, loff_t off, int whence);
+< int	scull_ioctl(struct inode *inode, struct file *filp,
+< 		unsigned int cmd, unsigned long arg);
+---
+>                     loff_t *f_pos);
+> loff_t  scull_llseek(struct file *filp, loff_t off, int whence);
+> int     scull_ioctl(struct inode *inode, struct file *filp,
+>                     unsigned int cmd, unsigned long arg);
+> 
+108c140
+< #define SCULL_IOC_MAGIC 'k'
+---
+> #define SCULL_IOC_MAGIC  'k'
+110c142,143
+< #define SCULL_IOCRESET	_IO(SCULL_IOC_MAGIC, 0)
+---
+> 
+> #define SCULL_IOCRESET    _IO(SCULL_IOC_MAGIC, 0)
+120,131c153,164
+< #define SCULL_IOCSQUANTUM 	_IOW(SCULL_IOC_MAGIC, 1, int)
+< #define SCULL_IOCSQSET 		_IOW(SCULL_IOC_MAGIC, 2, int)
+< #define SCULL_IOCTQUANTUM 	_IO(SCULL_IOC_MAGIC, 3)
+< #define SCULL_IOCTQSET		_IO(SCULL_IOC_MAGIC, 4)
+< #define SCULL_IOCGQUANTUM 	_IOR(SCULL_IOC_MAGIC, 5, int)
+< #define SCULL_IOCGQSET		_IOR(SCULL_IOC_MAGIC, 6, int)
+< #define SCULL_IOCQQUANTUM 	_IO(SCULL_IOC_MAGIC, 7)
+< #define SCULL_IOCQQSET		_IO(SCULL_IOC_MAGIC, 8)
+< #define SCULL_IOCXQUANTUM 	_IOWR(SCULL_IOC_MAGIC, 9, int)
+< #define SCULL_IOCXQSET		_IOWR(SCULL_IOC_MAGIC,10, int)
+< #define SCULL_IOCHQUANTUM 	_IO(SCULL_IOC_MAGIC, 11)
+< #define SCULL_IOCHQSET		_IO(SCULL_IOC_MAGIC, 12)
+---
+> #define SCULL_IOCSQUANTUM _IOW(SCULL_IOC_MAGIC,  1, int)
+> #define SCULL_IOCSQSET    _IOW(SCULL_IOC_MAGIC,  2, int)
+> #define SCULL_IOCTQUANTUM _IO(SCULL_IOC_MAGIC,   3)
+> #define SCULL_IOCTQSET    _IO(SCULL_IOC_MAGIC,   4)
+> #define SCULL_IOCGQUANTUM _IOR(SCULL_IOC_MAGIC,  5, int)
+> #define SCULL_IOCGQSET    _IOR(SCULL_IOC_MAGIC,  6, int)
+> #define SCULL_IOCQQUANTUM _IO(SCULL_IOC_MAGIC,   7)
+> #define SCULL_IOCQQSET    _IO(SCULL_IOC_MAGIC,   8)
+> #define SCULL_IOCXQUANTUM _IOWR(SCULL_IOC_MAGIC, 9, int)
+> #define SCULL_IOCXQSET    _IOWR(SCULL_IOC_MAGIC,10, int)
+> #define SCULL_IOCHQUANTUM _IO(SCULL_IOC_MAGIC,  11)
+> #define SCULL_IOCHQSET    _IO(SCULL_IOC_MAGIC,  12)
+138,139c171,172
+< #define SCULL_P_IOCTSIZE	 _IO(SCULL_IOC_MAGIC, 13)
+< #define SCULL_P_IOCQSIZE 	 _IO(SCULL_IOC_MAGIC,14)
+---
+> #define SCULL_P_IOCTSIZE _IO(SCULL_IOC_MAGIC,   13)
+> #define SCULL_P_IOCQSIZE _IO(SCULL_IOC_MAGIC,   14)
+143,145d175
+< #endif /* _SCULL_H_ */
+< 
+< 
+146a177
+> #endif /* _SCULL_H_ */
