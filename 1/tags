@@ -1,0 +1,50 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+LB_SIZE	observer.c	7;"	d	file:
+LB_SIZE	observer.v1.c	7;"	d	file:
+LONG	observer.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+LONG	observer.v1.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+SHORT	observer.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+SHORT	observer.v1.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+STANDARD	observer.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+STANDARD	observer.v1.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	e	enum:TYPE	file:
+TYPE	observer.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	g	file:
+TYPE	observer.v1.c	/^enum TYPE{STANDARD,SHORT,LONG};$/;"	g	file:
+c1	observer.c	/^char c1,c2;		\/\/字符处理单元$/;"	v
+c1	observer.v1.c	/^char c1,c2;		\/\/字符处理单元$/;"	v
+c2	observer.c	/^char c1,c2;		\/\/字符处理单元$/;"	v
+c2	observer.v1.c	/^char c1,c2;		\/\/字符处理单元$/;"	v
+do_part_A	observer.c	/^int do_part_A()$/;"	f
+do_part_A	observer.c	/^int do_part_A(void);$/;"	p	file:	signature:(void)
+do_part_B	observer.c	/^int do_part_B()$/;"	f
+do_part_B	observer.c	/^int do_part_B(void);$/;"	p	file:	signature:(void)
+do_part_C	observer.c	/^int do_part_C()$/;"	f
+do_part_C	observer.c	/^int do_part_C(void);$/;"	p	file:	signature:(void)
+do_part_D	observer.c	/^int do_part_D()$/;"	f
+do_part_D	observer.c	/^int do_part_D(void);$/;"	p	file:	signature:(void)
+duration	observer.c	/^int duration;		\/\/系统负荷检测时段$/;"	v
+duration	observer.v1.c	/^int duration;		\/\/系统负荷检测时段$/;"	v
+interval	observer.c	/^int interval;		\/\/系统负荷检测时间间隔$/;"	v
+interval	observer.v1.c	/^int interval;		\/\/系统负荷检测时间间隔$/;"	v
+iteration	observer.c	/^int iteration;$/;"	v
+iteration	observer.v1.c	/^int iteration;$/;"	v
+lineBuf	observer.c	/^char *lineBuf;		\/\/proc文件读出行缓冲$/;"	v
+lineBuf	observer.v1.c	/^char *lineBuf;		\/\/proc文件读出行缓冲$/;"	v
+main	observer.c	/^int main(int argc,char *argv[])$/;"	f	signature:(int argc,char *argv[])
+main	observer.v1.c	/^int main(int argc,char *argv[])$/;"	f	signature:(int argc,char *argv[])
+now	observer.c	/^struct timeval now;  	\/\/系统时间日期$/;"	v	typeref:struct:timeval
+now	observer.v1.c	/^struct timeval now;  	\/\/系统时间日期$/;"	v	typeref:struct:timeval
+repTypeName	observer.c	/^char repTypeName[16];$/;"	v
+repTypeName	observer.v1.c	/^char repTypeName[16];$/;"	v
+reportType	observer.c	/^enum TYPE reportType;	\/\/观察报告类型$/;"	v	typeref:enum:TYPE
+reportType	observer.v1.c	/^enum TYPE reportType;	\/\/观察报告类型$/;"	v	typeref:enum:TYPE
+sampleLoadAvg	observer.c	/^void sampleLoadAvg(){	\/\/TODO:观察系统负荷$/;"	f
+sampleLoadAvg	observer.v1.c	/^void sampleLoadAvg(){	\/\/TODO:观察系统负荷$/;"	f
+sampleTime	observer.c	/^void sampleTime(){  \/\/TODO:$/;"	f
+sampleTime	observer.v1.c	/^void sampleTime(){  \/\/TODO:$/;"	f
+thisProcFile	observer.c	/^FILE * thisProcFile; 	\/\/Proc打开文件指针,每次用它打开文件$/;"	v
+thisProcFile	observer.v1.c	/^FILE * thisProcFile; 	\/\/Proc打开文件指针,每次用它打开文件$/;"	v
