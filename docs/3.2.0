@@ -1,0 +1,213 @@
+  54static int show_stat(struct seq_file *p, void *v)
+  55{
+  56        int i, j;
+  57        unsigned long jif;
+  58        cputime64_t user, nice, system, idle, iowait, irq, softirq, steal;
+  59        cputime64_t guest, guest_nice;
+  60        u64 sum = 0;
+  61        u64 sum_softirq = 0;
+  62        unsigned int per_softirq_sums[NR_SOFTIRQS] = {0};
+  63        struct timespec boottime;
+  64
+  65        user = nice = system = idle = iowait =
+  66                irq = softirq = steal = cputime64_zero;
+  67        guest = guest_nice = cputime64_zero;
+  68        getboottime(&boottime);
+  69        jif = boottime.tv_sec;
+  70
+  71        for_each_possible_cpu(i) {
+  72                user = cputime64_add(user, kstat_cpu(i).cpustat.user);
+  73                nice = cputime64_add(nice, kstat_cpu(i).cpustat.nice);
+  74                system = cputime64_add(system, kstat_cpu(i).cpustat.system);
+  75                idle = cputime64_add(idle, get_idle_time(i));
+  76                iowait = cputime64_add(iowait, get_iowait_time(i));
+  77                irq = cputime64_add(irq, kstat_cpu(i).cpustat.irq);
+  78                softirq = cputime64_add(softirq, kstat_cpu(i).cpustat.softirq);
+  79                steal = cputime64_add(steal, kstat_cpu(i).cpustat.steal);
+  80                guest = cputime64_add(guest, kstat_cpu(i).cpustat.guest);
+  81                guest_nice = cputime64_add(guest_nice,
+  82                        kstat_cpu(i).cpustat.guest_nice);
+  83                sum += kstat_cpu_irqs_sum(i);
+  84                sum += arch_irq_stat_cpu(i);
+  85
+  86                for (j = 0; j < NR_SOFTIRQS; j++) {
+  87                        unsigned int softirq_stat = kstat_softirqs_cpu(j, i);
+  88
+  89                        per_softirq_sums[j] += softirq_stat;
+  90                        sum_softirq += softirq_stat;
+  91                }
+  92        }
+  93        sum += arch_irq_stat();
+  94
+  95        seq_printf(p, "cpu  %llu %llu %llu %llu %llu %llu %llu %llu %llu "
+  96                "%llu\n",
+  97                (unsigned long long)cputime64_to_clock_t(user),
+  98                (unsigned long long)cputime64_to_clock_t(nice),
+  99                (unsigned long long)cputime64_to_clock_t(system),
+ 100                (unsigned long long)cputime64_to_clock_t(idle),
+ 101                (unsigned long long)cputime64_to_clock_t(iowait),
+ 102                (unsigned long long)cputime64_to_clock_t(irq),
+ 103                (unsigned long long)cputime64_to_clock_t(softirq),
+ 104                (unsigned long long)cputime64_to_clock_t(steal),
+ 105                (unsigned long long)cputime64_to_clock_t(guest),
+ 106                (unsigned long long)cputime64_to_clock_t(guest_nice));
+ 107        for_each_online_cpu(i) {
+ 108                /* Copy values here to work around gcc-2.95.3, gcc-2.96 */
+ 109                user = kstat_cpu(i).cpustat.user;
+ 110                nice = kstat_cpu(i).cpustat.nice;
+ 111                system = kstat_cpu(i).cpustat.system;
+ 112                idle = get_idle_time(i);
+ 113                iowait = get_iowait_time(i);
+ 114                irq = kstat_cpu(i).cpustat.irq;
+ 115                softirq = kstat_cpu(i).cpustat.softirq;
+ 116                steal = kstat_cpu(i).cpustat.steal;
+ 117                guest = kstat_cpu(i).cpustat.guest;
+ 118                guest_nice = kstat_cpu(i).cpustat.guest_nice;
+ 119                seq_printf(p,
+ 120                        "cpu%d %llu %llu %llu %llu %llu %llu %llu %llu %llu "
+ 121                        "%llu\n",
+ 122                        i,
+ 123                        (unsigned long long)cputime64_to_clock_t(user),
+ 124                        (unsigned long long)cputime64_to_clock_t(nice),
+ 125                        (unsigned long long)cputime64_to_clock_t(system),
+ 126                        (unsigned long long)cputime64_to_clock_t(idle),
+ 127                        (unsigned long long)cputime64_to_clock_t(iowait),
+ 128                        (unsigned long long)cputime64_to_clock_t(irq),
+ 129                        (unsigned long long)cputime64_to_clock_t(softirq),
+ 130                        (unsigned long long)cputime64_to_clock_t(steal),
+ 131                        (unsigned long long)cputime64_to_clock_t(guest),
+ 132                        (unsigned long long)cputime64_to_clock_t(guest_nice));
+ 133        }
+ 134        seq_printf(p, "intr %llu", (unsigned long long)sum);
+ 135
+ 136        /* sum again ? it could be updated? */
+ 137        for_each_irq_nr(j)
+ 138                seq_printf(p, " %u", kstat_irqs(j));
+ 139
+ 140        seq_printf(p,
+ 141                "\nctxt %llu\n"
+ 142                "btime %lu\n"
+ 143                "processes %lu\n"
+ 144                "procs_running %lu\n"
+ 145                "procs_blocked %lu\n",
+ 146                nr_context_switches(),
+ 147                (unsigned long)jif,
+ 148                total_forks,
+ 149                nr_running(),
+ 150                nr_iowait());
+ 151
+ 152        seq_printf(p, "softirq %llu", (unsigned long long)sum_softirq);
+ 153
+ 154        for (i = 0; i < NR_SOFTIRQS; i++)
+ 155                seq_printf(p, " %u", per_softirq_sums[i]);
+ 156        seq_putc(p, '\n');
+ 157
+ 158        return 0;
+ 159}
+
+//3.3.6
+  52static int show_stat(struct seq_file *p, void *v)
+  53{
+  54        int i, j;
+  55        unsigned long jif;
+  56        u64 user, nice, system, idle, iowait, irq, softirq, steal;
+  57        u64 guest, guest_nice;
+  58        u64 sum = 0;
+  59        u64 sum_softirq = 0;
+  60        unsigned int per_softirq_sums[NR_SOFTIRQS] = {0};
+  61        struct timespec boottime;
+  62
+  63        user = nice = system = idle = iowait =
+  64                irq = softirq = steal = 0;
+  65        guest = guest_nice = 0;
+  66        getboottime(&boottime);
+  67        jif = boottime.tv_sec;
+  68
+  69        for_each_possible_cpu(i) {
+  70                user += kcpustat_cpu(i).cpustat[CPUTIME_USER];
+  71                nice += kcpustat_cpu(i).cpustat[CPUTIME_NICE];
+  72                system += kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
+  73                idle += get_idle_time(i);
+  74                iowait += get_iowait_time(i);
+  75                irq += kcpustat_cpu(i).cpustat[CPUTIME_IRQ];
+  76                softirq += kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ];
+  77                steal += kcpustat_cpu(i).cpustat[CPUTIME_STEAL];
+  78                guest += kcpustat_cpu(i).cpustat[CPUTIME_GUEST];
+  79                guest_nice += kcpustat_cpu(i).cpustat[CPUTIME_GUEST_NICE];
+  80                sum += kstat_cpu_irqs_sum(i);
+  81                sum += arch_irq_stat_cpu(i);
+  82
+  83                for (j = 0; j < NR_SOFTIRQS; j++) {
+  84                        unsigned int softirq_stat = kstat_softirqs_cpu(j, i);
+  85
+  86                        per_softirq_sums[j] += softirq_stat;
+  87                        sum_softirq += softirq_stat;
+  88                }
+  89        }
+  90        sum += arch_irq_stat();
+  91
+  92        seq_printf(p, "cpu  %llu %llu %llu %llu %llu %llu %llu %llu %llu "
+  93                "%llu\n",
+  94                (unsigned long long)cputime64_to_clock_t(user),
+  95                (unsigned long long)cputime64_to_clock_t(nice),
+  96                (unsigned long long)cputime64_to_clock_t(system),
+  97                (unsigned long long)cputime64_to_clock_t(idle),
+  98                (unsigned long long)cputime64_to_clock_t(iowait),
+  99                (unsigned long long)cputime64_to_clock_t(irq),
+ 100                (unsigned long long)cputime64_to_clock_t(softirq),
+ 101                (unsigned long long)cputime64_to_clock_t(steal),
+ 102                (unsigned long long)cputime64_to_clock_t(guest),
+ 103                (unsigned long long)cputime64_to_clock_t(guest_nice));
+ 104        for_each_online_cpu(i) {
+ 105                /* Copy values here to work around gcc-2.95.3, gcc-2.96 */
+ 106                user = kcpustat_cpu(i).cpustat[CPUTIME_USER];
+ 107                nice = kcpustat_cpu(i).cpustat[CPUTIME_NICE];
+ 108                system = kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
+ 109                idle = get_idle_time(i);
+ 110                iowait = get_iowait_time(i);
+ 111                irq = kcpustat_cpu(i).cpustat[CPUTIME_IRQ];
+ 112                softirq = kcpustat_cpu(i).cpustat[CPUTIME_SOFTIRQ];
+ 113                steal = kcpustat_cpu(i).cpustat[CPUTIME_STEAL];
+ 114                guest = kcpustat_cpu(i).cpustat[CPUTIME_GUEST];
+ 115                guest_nice = kcpustat_cpu(i).cpustat[CPUTIME_GUEST_NICE];
+ 116                seq_printf(p,
+ 117                        "cpu%d %llu %llu %llu %llu %llu %llu %llu %llu %llu "
+ 118                        "%llu\n",
+ 119                        i,
+ 120                        (unsigned long long)cputime64_to_clock_t(user),
+ 121                        (unsigned long long)cputime64_to_clock_t(nice),
+ 122                        (unsigned long long)cputime64_to_clock_t(system),
+ 123                        (unsigned long long)cputime64_to_clock_t(idle),
+ 124                        (unsigned long long)cputime64_to_clock_t(iowait),
+ 125                        (unsigned long long)cputime64_to_clock_t(irq),
+ 126                        (unsigned long long)cputime64_to_clock_t(softirq),
+ 127                        (unsigned long long)cputime64_to_clock_t(steal),
+ 128                        (unsigned long long)cputime64_to_clock_t(guest),
+ 129                        (unsigned long long)cputime64_to_clock_t(guest_nice));
+ 130        }
+ 131        seq_printf(p, "intr %llu", (unsigned long long)sum);
+ 132
+ 133        /* sum again ? it could be updated? */
+ 134        for_each_irq_nr(j)
+ 135                seq_printf(p, " %u", kstat_irqs(j));
+ 136
+ 137        seq_printf(p,
+ 138                "\nctxt %llu\n"
+ 139                "btime %lu\n"
+ 140                "processes %lu\n"
+ 141                "procs_running %lu\n"
+ 142                "procs_blocked %lu\n",
+ 143                nr_context_switches(),
+ 144                (unsigned long)jif,
+ 145                total_forks,
+ 146                nr_running(),
+ 147                nr_iowait());
+ 148
+ 149        seq_printf(p, "softirq %llu", (unsigned long long)sum_softirq);
+ 150
+ 151        for (i = 0; i < NR_SOFTIRQS; i++)
+ 152                seq_printf(p, " %u", per_softirq_sums[i]);
+ 153        seq_putc(p, '\n');
+ 154
+ 155        return 0;
+ 156}

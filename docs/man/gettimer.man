@@ -1,0 +1,57 @@
+man 2 gettimer
+
+NAME 
+	getitimer,setitimer - get or set value of an interval timer
+
+SYNOPSIS
+	#include <sys/time.h>
+
+	int getitimer(int which,struct itimerval *curr_value)
+	int setitimer(int which,const struct itimerval *new_value,
+		struct itimerval *old_value);
+
+DESCRIPTION
+	系统为每个进程提供了3种计时器(interval timer),每种在不同的时间域内递减。当任一计时器超时(expires)，一个信号被发送给进程，并且计时器(潜在的potentially)重新开始.
+	ITIMER_REAL	真实时间，发SIGALRM
+	ITIMER_VIRTUAL	只有进程在执行时才减少，发SIGVTALRM
+	ITIMER_PROF	同时在进程执行以及系统代表进程执行时(on behalf of the process)减少时间,发SIGPROF;常与ITIMER_VIRTUAL来衡量进程用户空间和内核空间
+
+	计时器结构在以下结构中定义
+
+	struct itimerval{
+		struct timeval it_interval; //下一个值
+		struct timeval it_value;	//当前值
+	}
+
+	struct timeval {
+		long tv_sec;
+		long tv_usec;	
+	}
+
+	getitimer()使用which制定的计时器的当前设置填充curr_value指向的结构(ITIMER_REAL,ITIMER_VIRTUAL,ITIMER_PROF中的一个).元素it_value被设为计时器剩下的时间，或者在该计时器禁用的情况下为0.类似，it_interval被设为重置值。
+
+	setitimer()设置制定的计时器的值为new_value.如果old_value不是NULL，那么旧的值就被存储在那里。
+
+	计时器从it_value递减到0，产生一个信号，并且重置到it_iterval.设为0的计时器(it_value是0或者计时器超时，it_interval是0)停止。
+
+	tv_sec和tv_usec在决定计时器的间隔(duration）时都是有意义的。
+
+	计时器在请求时间前超时，但是可能在一段（短的)时间后超时，这依赖与系统定时器的解析和系统负载；查阅time(7).
+
+	在超时时，会产生一个信号并且计时器被重置.如果计时器在进程激活(active）时超时(对ITIMER_VIRTUAL总是这样的),信号在产生之后立即被递送。否则，递送会偏移一小段时间，依赖与系统负载。
+
+RETURN VALUE
+	成功:0
+	失败:-1,errno被设置
+
+CONFORMING TO
+	POSIx.1-2001,SVr4,4.4BSD
+	POSIX.1-2008标记getitimer()和setitimer()为废弃的，建议使用POSIX 计时器API(timer_gettime(2),timer_settimer(2))
+
+NOTES
+	通过fork的子进程并不继承父进程的iterval timers.
+	POSIX.1未指定setitimer和3个接口alarm,sleep,usleep之间的交互。
+
+BUGS
+	...
+	since Linux 2.6.16, the kernel uses a different internal representation for times, and this ceiling is removed. On certain systems (includi

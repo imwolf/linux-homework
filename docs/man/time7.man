@@ -1,0 +1,36 @@
+TIME
+NAME
+	time - time和timer的概览
+DESCRIPTION
+真实时间和处理时间(Real time and process time)
+	Real time定义为从某固定点度量的时间，要么是从过去的一个标准点(查看Epoch和Calendar time的描述),或者是进程生命周期的某个点(比如开始)处(elapsed time).
+	Process time 定义为一个进程使用的CPU时间.有时候被分为user和系统分量。user CPU时间是在执行码在用户态执行的时间.System CPU时间是系统代表进程在内核态执行的时间(比如执行系统调用).time(1)命令能够用来确定一个程序执行时消耗的CPU时间。一个程序可以通过times(2),getrusage(2),clock(3)来决定它所用的CPU时间。
+
+硬件时钟(The hardware clock)
+	大多数计算机有（电池供电的）硬件始终，内核在启动时读取它并初始话软件始终。查阅rtc(4),hwclock(8)
+
+软件时钟，HZ和Jiffies(The software Clock,HZ and Jiffies
+	各种设置超时(如select,sigtimewait)或者度量CPU时间（如getrusage）的系统调用受限与software clock的精度。这是一个内核维护的时钟，以jiffies度量时间。jiffy的大小由内核常量HZ决定。
+
+	HZ的值在不同内核版本和硬件平台上不一样。i386的情况如下：包括2.4.x之前的版本HZ是100，jiffy的值是0.01秒。从2.6.0以来，HZ提高到了1000,jiffy变成0.001秒。自2.6.13，HZ是内核的配置参数，可是是100，250（默认），或者1000，jiffies值相应为0.01,0.004,0.001秒。自2.6.20以来，另一个频率可用：300，这是一个均匀划分通用的视频帧率的数字(PAL,25HZ;NTSC,30HZ)??
+
+	times(2)系统调用是个特例。它以内核常量USER_HZ的颗粒度报告时间。用户空间应用程序可以使用sysconf(_SC_CLK_TCK)来判断该常量。
+
+高精度计时器(High-Resolution Timers)
+	在2.6.21前，计时器和sleep系统调用受限与jiffy的大小
+	自2.6.21,linux只是高精度定时器(HRTs),是可选的配置，通过CONFIG_HIGH_RES_TIMERS来配置。在一个支持HRTs的系统上，sleep和计时器系统调用不再受jiffy约束，反而能够如硬件允许般的精确(毫秒级精度是典型的现代硬件）。你可以判断高精度定时器是否被支持，通过调用clock_getres(2)或者查看/proc/timer_list中的“resolution”项来判断。
+	
+	HRTs现在在所有硬件结构上被支持。
+
+纪元(The Epoch)
+	UNIX系统以从Epoch过去的秒数来呈现时间1970-01-01 00:00:00:00 +0000(UTC).
+
+	一个程序能够判断calendar time使用gettimeofday(2),它返回时间（以秒数和毫秒数），从纪元消逝的时间。系统时间可以通过settimeofday来改变。
+
+分解时间（Broken-down time)
+	某些哭喊数使用类型tm来代表分解时间，它存储了分解到不同时间分量的时间值(year,month,day,hour,minute,second等等）。该结构在ctime(3）内被秒数，它也描述了在calendar time和broken-down之间转换的函数。在broken-down time和可打印字符串之间的转化函数在ctime,strftime和strptime中描述。
+
+睡眠和设置计时器(Sleeping and Setting Timers)
+	多个系统调用和函数允许程序sleep（挂起执行)一段执行时间；查阅nanosleep(2),sleep(3)
+
+	多个系统调用允许进程设计计时器在未来某些点上超时，可选的重复间隔；查看alarm(2),getitimer(2),timerfd_create(2),timer_create(2)
