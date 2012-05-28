@@ -1,9 +1,0 @@
-
-TARGETS = test_module
-CCFLAGS = -g -Wall
-CC = gcc
-
-all:$(TARGETS)
-
-%.o:%.c
-	$(CC) -c $< $(CCFLAGS)

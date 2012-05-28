@@ -1,8 +1,0 @@
-TARGETS = e_open e_wait e_signal e_close test_syscall
-CCFLAGS = -g -Wall
-CC = gcc
-
-all:$(TARGETS)
-
-%.o:%.c
-	$(CC) -c $< $(CCFLAGS)

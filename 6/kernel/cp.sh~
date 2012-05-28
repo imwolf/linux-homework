@@ -1,2 +1,0 @@
-#!/bin/bash
-cp ./myevent.c /home/wolf/linux/linux2.6.35.14/kernel/myevent.c
