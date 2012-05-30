@@ -1,0 +1,93 @@
+这个问题好像是因为在内核中我没有进行null指针的检查；正常情况下，应用程序应该产生一个段错误，但是内核肯定不能把自己挂起把，于是导致该问题的进程被Kill，发送137信号;
+http://stackoverflow.com/questions/341422/linux-kernel-programming-unable-to-handle-kernel-null-pointer-dereference
+注意：struct timeval * tv;  这个语句不分配内存
+      struct timeval tv;分配内存
+
+使用时do_pfcount(&tv);
+在第一种情况时直接do_pfcount(tv);就会引发Opps?，反正是下面两个Bug中的一个。
+
+BUG: unable to handle kernel paging request at xxxx
+[11906.562738] BUG: unable to handle kernel paging request at 08048459
+[11906.562748] IP: [<c1055391>] jiffies_to_timespec+0x51/0x70
+[11906.562761] *pdpt = 00000000301cd001 *pde = 00000000747fb067 
+[11906.562767] Oops: 0003 [#30] SMP 
+[11906.562773] last sysfs file: /sys/devices/system/cpu/cpu1/cache/index2/shared_cpu_map
+[11906.562778] Modules linked in: sco rfcomm bnep l2cap bluetooth parport_pc ppdev binfmt_misc snd_hda_codec_nvhdmi snd_hda_codec_realtek snd_hda_intel snd_hda_codec snd_hwdep snd_pcm snd_seq_midi snd_rawmidi joydev snd_seq_midi_event snd_seq snd_timer snd_seq_device uvcvideo nvidia(P) psmouse snd jmb38x_ms lp serio_raw video wmi lib80211_crypt_tkip parport output soundcore videodev v4l1_compat memstick wl(P) mac_hid snd_page_alloc lib80211 usbhid hid firewire_ohci tg3 sdhci_pci sdhci firewire_core crc_itu_t libphy [last unloaded: mt_syscall]
+[11906.562850] 
+[11906.562856] Pid: 10253, comm: sc Tainted: P   M  D     2.6.35.14 #1 KL1                             /IdeaPad Y450                    
+[11906.562862] EIP: 0060:[<c1055391>] EFLAGS: 00010293 CPU: 0
+[11906.562867] EIP is at jiffies_to_timespec+0x51/0x70
+[11906.562871] EAX: 00002d57 EBX: 00000a8e ECX: 08048459 EDX: 110302d0
+[11906.562875] ESI: 881fa8d0 EDI: 3b9aca00 EBP: f272dfa4 ESP: f272df90
+[11906.562880]  DS: 007b ES: 007b FS: 00d8 GS: 00e0 SS: 0068
+[11906.562885] Process sc (pid: 10253, ti=f272c000 task=ef22cc20 task.ti=f272c000)
+[11906.562888] Stack:
+[11906.562891]  881fa8d0 00000a8e 00000000 08048450 00000000 f272dfac c1066645 f272c000
+[11906.562902] <0> c1008c5f 00000000 08048459 b7890ff4 08048450 00000000 00000000 00000152
+[11906.562914] <0> 0000007b 0000007b 00000000 00000033 00000152 b78a9424 00000073 00000292
+[11906.562927] Call Trace:
+[11906.562934]  [<c1066645>] ? sys_mysyscall+0x15/0x30
+[11906.562942]  [<c1008c5f>] ? sysenter_do_call+0x12/0x28
+[11906.562946] Code: 45 ec 89 d3 89 55 f0 76 17 89 d0 ba 83 4b 04 00 c1 e8 09 f7 e2 c1 ea 07 69 d2 00 ca 9a 3b 29 d3 89 f0 89 da bf 00 ca 9a 3b f7 f7 <89> 01 89 51 04 8b 5d f4 8b 75 f8 8b 7d fc 89 ec 5d c3 8d b6 00 
+[11906.563015] EIP: [<c1055391>] jiffies_to_timespec+0x51/0x70 SS:ESP 0068:f272df90
+[11906.563023] CR2: 0000000008048459
+[11906.563029] ---[ end trace d76e00bcfbfa338e ]---
+
+BUG: unable to handle kernel NULL pointer dereference at 00000154
+
+[12463.005851] BUG: unable to handle kernel NULL pointer dereference at 00000154
+[12463.005861] IP: [<c10750a1>] do_gettimeofday+0x21/0x40
+[12463.005873] *pdpt = 0000000030501001 *pde = 0000000000000000 
+[12463.005880] Oops: 0002 [#31] SMP 
+[12463.005885] last sysfs file: /sys/devices/system/cpu/cpu1/cache/index2/shared_cpu_map
+[12463.005890] Modules linked in: sco rfcomm bnep l2cap bluetooth parport_pc ppdev binfmt_misc snd_hda_codec_nvhdmi snd_hda_codec_realtek snd_hda_intel snd_hda_codec snd_hwdep snd_pcm snd_seq_midi snd_rawmidi joydev snd_seq_midi_event snd_seq snd_timer snd_seq_device uvcvideo nvidia(P) psmouse snd jmb38x_ms lp serio_raw video wmi lib80211_crypt_tkip parport output soundcore videodev v4l1_compat memstick wl(P) mac_hid snd_page_alloc lib80211 usbhid hid firewire_ohci tg3 sdhci_pci sdhci firewire_core crc_itu_t libphy [last unloaded: mt_syscall]
+[12463.005962] 
+[12463.005968] Pid: 10638, comm: sc Tainted: P   M  D     2.6.35.14 #1 KL1                             /IdeaPad Y450                    
+[12463.005974] EIP: 0060:[<c10750a1>] EFLAGS: 00010296 CPU: 1
+[12463.005979] EIP is at do_gettimeofday+0x21/0x40
+[12463.005983] EAX: 4fb92a5e EBX: 00000154 ECX: 2519706a EDX: 10624dd3
+[12463.005987] ESI: 08048480 EDI: 00000000 EBP: ef157fa4 ESP: ef157f98
+[12463.005991]  DS: 007b ES: 007b FS: 00d8 GS: 00e0 SS: 0068
+[12463.005995] Process sc (pid: 10638, ti=ef156000 task=f6ec32c0 task.ti=ef156000)
+[12463.005999] Stack:
+[12463.006002]  4fb92a5e 2519706a 00000154 ef157fac c1066670 ef156000 c1008c5f 00000154
+[12463.006013] <0> 08048489 b7872ff4 08048480 00000000 00000000 00000153 0000007b 0000007b
+[12463.006025] <0> 00000000 00000033 00000153 b788b424 00000073 00000292 bfe6045c 0000007b
+[12463.006038] Call Trace:
+[12463.006045]  [<c1066670>] ? sys_do_pfcount+0x10/0x20
+[12463.006052]  [<c1008c5f>] ? sysenter_do_call+0x12/0x28
+[12463.006056] Code: c4 08 5b 5d c3 90 8d 74 26 00 55 89 e5 53 83 ec 08 0f 1f 44 00 00 89 c3 8d 45 f4 e8 8a fe ff ff 8b 45 f4 ba d3 4d 62 10 8b 4d f8 <89> 03 89 c8 f7 ea c1 f9 1f c1 fa 06 29 ca 89 53 04 83 c4 08 5b 
+[12463.006125] EIP: [<c10750a1>] do_gettimeofday+0x21/0x40 SS:ESP 0068:ef157f98
+[12463.006133] CR2: 0000000000000154
+[12463.006138] ---[ end trace d76e00bcfbfa338f ]---
+
+
+3.返回-1，FUNCTION NOT IMPLEMENT
+
+现象：
+c1066970 T sys_mycall
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /boot/System.map-2.6.35.14 |grep mycall
+c1066970 T sys_mycall
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /boot/System.map-2.6.35.14 |grep myevent
+c10666b0 T sys_myevent_open
+c10667f0 T sys_myevent_wait
+c1066880 T sys_myevent_signal
+c10668e0 T sys_myevent_close
+c1868668 B lpmyevent_end
+c186866c B lpmyevent_head
+
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /proc/kallsyms |grep myevent
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /proc/kallsyms |grep mycall
+
+但是：
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /proc/kallsyms |grep do_pfcount
+c1066660 T sys_do_pfcount
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /proc/kallsyms |grep sys_mysyscall
+c1066630 T sys_mysyscall
+
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /boot/System.map-2.6.35.14 |grep do_pfcount
+c1066660 T sys_do_pfcount
+wolf@wolf-pc:~/experiment/linux_kernel/linux/linux-2.6.35.14$ cat /boot/System.map-2.6.35.14 |grep sys_mysyscall
+c1066630 T sys_mysyscall
+
+

@@ -1,0 +1,63 @@
+要改的文件
+
+
+1.linux/kernel/sys.c 添加系统调用的定义
+2.linux/kernel/arch/x86/kernel/syscall_table_32.S 修改系统调用表
+ .long sys_mycal
+ .long sys_addtotal
+ .long sys_three
+3.linux/arch/x86/include/asm/unistd_32.h
+#define _NR_mycall 338
+#define _NR_addtotal 339
+#define _NR_three 340
+
+linux/ubuntu/omnibook/Makefile
+4.EXTRA_LDFLAGS += $(src)/sections.lds
+
+编译
+cd linux
+
+1.make mrproper 
+2.make clean
+//3.make oldconfig
+4.make bzImage
+
+5.make modules
+make modules_install
+===========================
+二.page_fault
+1.声明变量pfcount;
+	include/linux/mm.h
+extern unsigned long volatile pfcount;
+2.定义变量pfcount;
+linux/arch/x86/mm/fault.c
+unsigned long volatile pfcount;
+
+3.在do_page_fault中加自加动作
+156,157
+pfcount++;
+
+4.在kernel/ksysm.c（arch/x86/kernel/i386_ksyms_32.c?）中加入EXPORT_SYMBOL(pfcount),使得模块能读取变量pfcount,同理导出jiffies？
+
+5.导出后写个模块用proc文件系统来读取该值
+或者使用一个系统调用
+============================
+系统调用
+1.linux/kernel/sys.c 添加系统调用的定义
+asmlinkage unsigned long sys_do_pfcount(struct timeval * tv);
+
+2.linux/kernel/arch/x86/kernel/syscall_table_32.S 修改系统调用表
+ .long sys_do_pfcount
+
+3.linux/arch/x86/include/asm/unistd_32.h
+#define _NR_mycall 338
+#define _NR_do_pfcount 339
+
+linux/ubuntu/omnibook/Makefile
+4.EXTRA_LDFLAGS += $(src)/sections.lds
+
+
+============================================
+http://book.51cto.com/art/200810/93830.htm
+
+

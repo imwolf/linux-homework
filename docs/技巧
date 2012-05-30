@@ -1,0 +1,4 @@
+make help查看编译选项
+
+可以发现make all编译所有标*的，这些是vmlinux,modules,bzImage,
+所以要只编译内核的话，只需make vmlinux
